@@ -1,0 +1,35 @@
+{
+  "name": "cordova-plugin-background-mode",
+  "version": "1.0.0",
+  "description": "Cordova Background Plugin - Sample App ======================================",
+  "main": "index.js",
+  "dependencies": {
+    "cordova-android": "^8.0.0",
+    "cordova-plugin-background-mode-fixed": "git+https://github.com/OptizeTeam/cordova-plugin-background-mode-fixed.git",
+    "cordova-plugin-badge": "^0.8.8",
+    "cordova-plugin-device": "^2.0.2",
+    "cordova-plugin-vibration": "^3.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/katzer/cordova-plugin-background-mode/issues"
+  },
+  "homepage": "https://github.com/katzer/cordova-plugin-background-mode#readme",
+  "cordova": {
+    "plugins": {
+      "cordova-plugin-device": {},
+      "cordova-plugin-background-mode-fixed": {},
+      "cordova-plugin-badge": {},
+      "cordova-plugin-vibration": {}
+    },
+    "platforms": [
+      "android"
+    ]
+  }
+}
