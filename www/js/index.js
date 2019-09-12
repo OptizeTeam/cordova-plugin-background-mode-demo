@@ -1,21 +1,3 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
 function log(key, value) {
     var item = localStorage.getItem('log') || '[]',
         array = JSON.parse(item);
@@ -30,22 +12,26 @@ function log(key, value) {
 }
 
 var app = {
+    // To update the badge in intervals
+    timer: null,
+    backgroundTimer: null,
+    foregroundTimer: null,
     // Application Constructor
-    initialize: function() {
+    initialize: function () {
         this.bindEvents();
     },
     // Bind Event Listeners
     //
     // Bind any events that are required on startup. Common events are:
     // 'load', 'deviceready', 'offline', and 'online'.
-    bindEvents: function() {
+    bindEvents: function () {
         document.addEventListener('deviceready', this.onDeviceReady, false);
     },
     // deviceready Event Handler
     //
     // The scope of 'this' is the event. In order to call the 'receivedEvent'
     // function, we must explicitly call 'app.receivedEvent(...);'
-    onDeviceReady: function() {
+    onDeviceReady: function () {
         app.receivedEvent('deviceready');
         app.pluginInitialize();
         // socket.init();
@@ -53,22 +39,19 @@ var app = {
         log('onDeviceReady', null);
     },
     // Update DOM on a Received Event
-    receivedEvent: function(id) {
-        var parentElement = document.getElementById(id);
-        var listeningElement = parentElement.querySelector('.listening');
-        var receivedElement = parentElement.querySelector('.received');
-
-        listeningElement.setAttribute('style', 'display:none;');
-        receivedElement.setAttribute('style', 'display:block;');
-
+    receivedEvent: function (id) {
         log('receivedEvent', id);
     },
     // Initialize plugin
-    pluginInitialize: function() {
+    pluginInitialize: function () {
         var silentBtn = document.getElementById('silent'),
-            modeBtn   = document.getElementById('mode'),
-            logBtn    = document.getElementById('log'),
-            plugin    = cordova.plugins.backgroundMode;
+            modeBtn = document.getElementById('mode'),
+            logBtn = document.getElementById('log'),
+            calibrateBtn = document.getElementById('calibrate'),
+            devicemotionBtn = document.getElementById('devicemotion'),
+            accelerationBtn = document.getElementById('acceleration'),
+            plugin = cordova.plugins.backgroundMode,
+            counter = 0;
 
         plugin.setDefaults({ color: 'F14F4D' });
         plugin.overrideBackButton();
@@ -80,81 +63,158 @@ var app = {
 
         modeBtn.onclick = app.onModeButtonClicked;
         logBtn.onclick = app.onLogButtonClicked;
+        calibrateBtn.onclick = app.onCalibrateButtonClicked;
+        devicemotionBtn.onclick = app.onDevicemotionButtonClicked;
+        accelerationBtn.onclick = app.onAccelerationButtonClicked;
 
         if (device.platform == 'Android') {
             silentBtn.onclick = app.onSilentButtonClicked;
         } else {
             app.onSilentButtonClicked();
         }
+
+        app.timer = setInterval(function () {
+            counter += 10;
+
+            log('allground', counter);
+        }, 10000);
     },
     // Read log
-    onLogButtonClicked: function() {
+    onLogButtonClicked: function () {
         var localLog = JSON.parse(localStorage.getItem('log')),
-            content  = '',
+            content = '',
             textarea = document.getElementById('log-output');
 
         localLog.forEach(function (logEntry) {
-            content += logEntry.date + ': [' + logEntry.type + '] ' + logEntry.message + '\n'; 
+            content += logEntry.date + ': [' + logEntry.type + '] ' + logEntry.message + '\n';
         });
 
         textarea.value = content;
     },
     // Toggle the silent mode
-    onSilentButtonClicked: function() {
-        var plugin   = cordova.plugins.backgroundMode,
-            btn      = document.getElementById('silent'),
+    onSilentButtonClicked: function () {
+        var plugin = cordova.plugins.backgroundMode,
+            btn = document.getElementById('silent'),
             isSilent = !plugin.getDefaults().silent;
 
         app.setButtonClass(btn, isSilent);
         plugin.setDefaults({ silent: isSilent });
     },
     // Enable or disable the backgroud mode
-    onModeButtonClicked: function() {
+    onModeButtonClicked: function () {
         var plugin = cordova.plugins.backgroundMode;
         plugin.setEnabled(!plugin.isEnabled());
     },
+    // Enable calibration
+    onCalibrateButtonClicked: function () {
+        window.addEventListener('compassneedscalibration', function (event) {
+            // ask user to wave device in a figure-eight motion .
+            event.preventDefault();
+
+            log('compassneedscalibration', null);
+        }, true);
+
+        log('calibrationButton', null);
+    },
+    // Toggle new devicemotion listener
+    onDevicemotionButtonClicked: function () {
+        var btn = document.getElementById('devicemotion'),
+            timestamp = + new Date();
+
+        app.setButtonClass(btn, true);
+
+        function processEvent(event) {
+            if (timestamp + 5000 < + new Date()) {
+                timestamp = + new Date();
+                
+                log('devicemotion', [
+                    event.acceleration.x,
+                    event.acceleration.y,
+                    event.acceleration.z
+                ]);
+                log('devicemotionIG', [
+                    event.accelerationIncludingGravity.x,
+                    event.accelerationIncludingGravity.y,
+                    event.accelerationIncludingGravity.z
+                ]);
+                log('devicemotionRR', [
+                    event.rotationRate.x,
+                    event.rotationRate.y,
+                    event.rotationRate.z
+                ]);
+            }
+        }
+
+        window.addEventListener('devicemotion', processEvent, true);
+
+        log('devicemotionButton', null);
+    },
+    // Toggle old acceleration listener
+    onAccelerationButtonClicked: function () {
+        var btn = document.getElementById('acceleration');
+
+        app.setButtonClass(btn, true);
+
+        function onSuccess(acceleration) {
+            log('acceleration', acceleration);
+        }
+
+        function onError() {
+            log('accelerationError', null);
+        }
+
+        var options = {
+            frequency: 5000
+        };
+
+        var watchID = navigator.accelerometer.watchAcceleration(onSuccess, onError, options);
+
+        log('accelerationButton', watchID);
+    },
     // Update CSS classes
-    onModeEnabled: function() {
+    onModeEnabled: function () {
         var btn = document.getElementById('mode');
         app.setButtonClass(btn, true);
         cordova.plugins.notification.badge.requestPermission(function (granted) {
             log('badge.requestPermission', granted);
         });
 
-        log('onModeEnabled',  null);
+        log('onModeEnabled', null);
     },
     // Update CSS classes
-    onModeDisabled: function() {
+    onModeDisabled: function () {
         var btn = document.getElementById('mode');
         app.setButtonClass(btn, false);
 
-        log('onModeDisabled',  null);
+        log('onModeDisabled', null);
     },
     // Toggle 'active' CSS class and return new status
-    setButtonClass: function(el, setActive) {
+    setButtonClass: function (el, setActive) {
         if (setActive) {
             el.className += ' active';
         } else {
             el.className = el.className.replace(' active', '');
         }
     },
-    // To update the badge in intervals
-    timer: null,
     // Update badge once mode gets activated
-    onModeActivated: function() {
+    onModeActivated: function () {
         var counter = 0;
+
+        clearInterval(app.foregroundTimer);
+
+        cordova.plugins.notification.badge.clear();
 
         cordova.plugins.backgroundMode.disableWebViewOptimizations();
 
-        app.timer = setInterval(function () {
+        app.backgroundTimer = setInterval(function () {
             counter += 10;
 
             cordova.plugins.notification.badge.set(counter);
 
             if (counter % 60 === 0) {
                 cordova.plugins.backgroundMode.configure({
-                    title: 'Running since ' + counter + ' sec',
-                    text: 'Running since ' + counter + ' sec, hell yeah!'
+                    title: 'In background since ' + counter + ' sec',
+                    text: 'In background since ' + counter + ' sec, hell yeah!'
                 });
 
                 if (navigator.vibrate) {
@@ -162,62 +222,40 @@ var app = {
                 }
             }
 
-            log('running',  'since ' + counter + ' sec');
+            log('background', counter);
         }, 10000);
 
-        log('onModeActivated',  null);
+        log('onModeActivated', null);
     },
     // Reset badge once deactivated
-    onModeDeactivated: function() {
-        cordova.plugins.notification.badge.clear();
-        clearInterval(app.timer);
+    onModeDeactivated: function () {
+        var counter = 0;
 
-        log('onModeDeactivated',  null);
+        clearInterval(app.backgroundTimer);
+
+        cordova.plugins.notification.badge.clear();
+
+        app.foregroundTimer = setInterval(function () {
+            counter += 10;
+
+            cordova.plugins.notification.badge.set(counter);
+
+            if (counter % 60 === 0) {
+                cordova.plugins.backgroundMode.configure({
+                    title: 'In foreground since ' + counter + ' sec',
+                    text: 'In foreground since ' + counter + ' sec, hell yeah!'
+                });
+
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+            }
+
+            log('foreground', counter);
+        }, 10000);
+
+        log('onModeDeactivated', null);
     }
 };
-
-// var socket = {
-//     _socket: null,
-
-//     init: function() {
-//         if (!window.hasOwnProperty('WebSocket'))
-//             return;
-
-//         this._socket = new WebSocket('ws://echo.websocket.org/');
-
-//         this._socket.onopen    = function(evt) { socket.onOpen(evt); };
-//         this._socket.onclose   = function(evt) { socket.onClose(evt); };
-//         this._socket.onmessage = function(evt) { socket.onMessage(evt); };
-//         this._socket.onerror   = function(evt) { socket.onError(evt); };
-//     },
-
-//     onOpen: function(evt) {
-//         console.log('CONNECTED');
-//         this.doSend('background-mode plugin rocks');
-//     },
-
-//     onClose: function(evt) {
-//         console.log('DISCONNECTED');
-//         log('close', 'DISCONNECTED');
-//     },
-
-//     onMessage: function(evt) {
-//         console.log('RECEIVED: ' + evt.data);
-//         log('message', evt.data);
-//     },
-
-//     onError: function(evt) {
-//         console.log('ERROR: ' + evt.data);
-//         log('error', message);
-//     },
-
-//     doSend: function(message) {
-//         if (this._socket) {
-//             console.log('SENT: ' + message);
-//             this._socket.send(message);
-//             log('send', message);
-//         }
-//     }
-// };
 
 app.initialize();

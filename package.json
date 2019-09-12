@@ -8,6 +8,7 @@
     "cordova-plugin-background-mode-fixed": "git+https://github.com/OptizeTeam/cordova-plugin-background-mode-fixed.git",
     "cordova-plugin-badge": "^0.8.8",
     "cordova-plugin-device": "^2.0.2",
+    "cordova-plugin-device-motion": "^2.0.1",
     "cordova-plugin-vibration": "^3.1.0"
   },
   "devDependencies": {},
@@ -26,7 +27,8 @@
       "cordova-plugin-device": {},
       "cordova-plugin-background-mode-fixed": {},
       "cordova-plugin-badge": {},
-      "cordova-plugin-vibration": {}
+      "cordova-plugin-vibration": {},
+      "cordova-plugin-device-motion": {}
     },
     "platforms": [
       "android"
